@@ -1,0 +1,141 @@
+#include <Arduino.h>
+#include <SPIFFS.h>
+#include <driver/adc.h>
+
+const int sampleRate = 16000; // 16kHz sample rate
+const int sampleDuration = 1; // 1 second of audio
+const int bufferSize = sampleRate * sampleDuration;
+const int buttonPin = 2; // Change this to your button pin
+
+File audioFile;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(buttonPin, INPUT_PULLUP);
+
+  if (!SPIFFS.begin(true)) {
+    Serial.println("SPIFFS initialization failed!");
+    return;
+  }
+
+  removeAllFiles();
+
+  adc1_config_width(ADC_WIDTH_BIT_12); // Set ADC to 12-bit resolution
+  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_0); // Use ADC1_CHANNEL_0 (GPIO36) for microphone input
+  adc1_ulp_enable();
+  Serial.println("Press the button to record audio...");
+}
+
+void loop() {
+  int buttonState = digitalRead(buttonPin);
+  Serial.print(buttonState);
+  if (buttonState == HIGH) {
+    recordAudio();
+    convertToWAV("audio.raw", "audio.wav");
+    viewFile("audio.raw");
+    viewFile("audio.wav");
+    delay(5000); // Debounce the button
+  }
+  delay(100);
+}
+
+void recordAudio() {
+  Serial.println("Recording audio...");
+  File audioFile = SPIFFS.open("/audio.raw", "w");
+
+  if (!audioFile) {
+    Serial.println("Failed to open file for writing.");
+    return;
+  }
+
+  Serial.println("Buffer starting to Fill");
+  int16_t audioBuffer[bufferSize];
+  for (int i = 0; i < bufferSize; i++) {
+    int16_t sample = analogRead(35); // Read from ADC1_CHANNEL_0 (GPIO35)
+    Serial.println(sample);
+    audioBuffer[i] = sample;
+  }
+
+  Serial.println("Buffer Written To");
+  Serial.print(sizeof(audioBuffer));
+  audioFile.write((uint8_t *)audioBuffer, bufferSize * 2); // 16-bit data, 2 bytes per sample
+  audioFile.close();
+  Serial.println("Finished Recording Audio");
+}
+
+void viewFile(const char *fileToView){
+  Serial.println("Wieving File");
+  Serial.println("--------------------------------------------");
+
+  File file2 = SPIFFS.open(fileToView, "r");
+ 
+  if(!file2){
+      Serial.println("Failed to open file for reading");
+      return;
+  }
+ 
+  Serial.println("File Content:");
+ 
+  while(file2.available()){
+    Serial.write(file2.read());
+  }
+  file2.close();
+}
+
+void convertToWAV(const char *inputFile, const char *outputFile) {
+  Serial.println("WAV conversion begin.");
+  File rawFile = SPIFFS.open(inputFile, "r");
+  File wavFile = SPIFFS.open(outputFile, "w");
+
+  // WAV header
+  char header[44];
+  memcpy(header, "RIFF", 4);
+  int32_t fileLength = rawFile.size() + 36;
+  memcpy(header + 4, &fileLength, 4);
+  memcpy(header + 8, "WAVEfmt ", 8);
+  int32_t fmtChunkSize = 16;
+  memcpy(header + 16, &fmtChunkSize, 4);
+  int16_t audioFormat = 1; // PCM
+  memcpy(header + 20, &audioFormat, 2);
+  int16_t numChannels = 1;
+  memcpy(header + 22, &numChannels, 2);
+  int32_t byteRate = sampleRate * 2;
+  memcpy(header + 24, &byteRate, 4);
+  int16_t blockAlign = 2;
+  memcpy(header + 32, &blockAlign, 2);
+  int16_t bitsPerSample = 16;
+  memcpy(header + 34, &bitsPerSample, 2);
+  memcpy(header + 36, "data", 4);
+  int32_t dataLength = rawFile.size();
+  memcpy(header + 40, &dataLength, 4);
+  wavFile.write((uint8_t *)header, 44);
+
+  // Copy the raw audio data
+  uint8_t buffer[1024];
+  while (rawFile.available()) {
+    int bytesRead = rawFile.read(buffer, sizeof(buffer));
+    wavFile.write(buffer, bytesRead);
+  }
+
+  rawFile.close();
+  wavFile.close();
+  Serial.println("WAV conversion complete.");
+
+}
+
+void removeAllFiles(){
+  // List all files
+  File root = SPIFFS.open("/");
+  File file = root.openNextFile();
+  if (!file) {
+    Serial.println("No Files in Root.");
+    return;
+  }
+  while (file) {
+    Serial.print("Deleting file: ");
+    Serial.println(file.name());
+    file.close();
+    SPIFFS.remove(file.name());
+    file = root.openNextFile();
+  }
+}
