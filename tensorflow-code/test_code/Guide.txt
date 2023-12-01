@@ -1,0 +1,53 @@
+Use python=3.10.12
+Move BUILD and micro_speech_test.cc files into TFLite-Micro repo
+Move conv_model.tflite file into TFLIte-Micro models folder
+
+--Run
+bazel run tensorflow/lite/micro/examples/micro_speech:micro_speech_test --verbose_failures
+
+--To change model
+Move tflite file into models folder
+Copy and modify these lines
+
+generate_cc_arrays(
+    name = "generated_conv_model_cc",
+    src = "models/conv_model.tflite",
+    out = "models/conv_model_data.cc",
+)
+
+generate_cc_arrays(
+    name = "generated_conv_model_hdr",
+    src = "models/conv_model.tflite",
+    out = "models/conv_model_data.h",
+)
+
+cc_library(
+    name = "conv_model_data",
+    srcs = [
+        ":generated_conv_model_cc",
+    ],
+    hdrs = [
+        ":generated_conv_model_hdr",
+    ],
+)
+
+cc_test(
+    name = "micro_speech_test",
+    srcs = [
+        "micro_speech_test.cc",
+    ],
+    deps = [
+        ":audio_preprocessor_model_data",
+        ":audio_sample_test_data_1000ms",
+        ":audio_sample_test_data_30ms",
+        ":micro_model_settings",
+        ":micro_speech_model_data",
+        ":conv_model_data",
+        #### INSERT CC_LIBRARY NAME HERE ####
+        "//tensorflow/lite/micro:micro_framework",
+        "//tensorflow/lite/micro:micro_log",
+        "//tensorflow/lite/micro:op_resolvers",
+        "//tensorflow/lite/micro/testing:micro_test",
+        "//tensorflow/lite/schema:schema_fbs",
+    ],
+)
