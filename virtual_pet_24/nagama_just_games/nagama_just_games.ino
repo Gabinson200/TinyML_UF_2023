@@ -16,16 +16,16 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1 
-#define I2C_SDA 33 // Microcontroller pins to which the OLED is attached
-#define I2C_SCL 32  
+#define I2C_SDA 21 // 33
+#define I2C_SCL 22  // 32 on actual
 
 TwoWire I2C_OLED = TwoWire(0);
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &I2C_OLED, OLED_RESET);
 
 // Define joystick pins
-#define JOY_X 14 // Joystick X-axis analog pin
-#define JOY_Y 15 // Joystick Y-axis analog pin
-#define JOY_BTN 13 // Joystick button pin
+#define JOY_X 35 // Joystick X-axis analog pin 14
+#define JOY_Y 32 // Joystick Y-axis analog pin 15
+#define JOY_BTN 13 // Joystick button pin 13
 
 // Constants for button dimensions and positions
 const int buttonWidth = 32;
@@ -55,6 +55,11 @@ bool isGameActive = false;
 // Timer variables
 unsigned long previousMillis = 0;
 
+static int HAPPY = 100;
+static int ENERGY = 100;
+static int NUTRITION = 100;
+
+
 // Arrays holding dinosaur sprite images
 unsigned char* dino_right[] = {bitmap_right_tail_up, bitmap_right_tail_down};
 unsigned char* dino_left[] = {bitmap_left_tail_up, bitmap_left_tail_down};
@@ -80,9 +85,9 @@ void loop() {
   joyX = map(analogRead(JOY_X), 0, 1023, 0, 32);
   joyY = map(analogRead(JOY_Y), 0, 1023, 0, 32);
   joyButton = digitalRead(JOY_BTN);
-  Serial.print(joyX);
-  Serial.print("\t");
-  Serial.println(joyY);
+  // Serial.print(joyX);
+  // Serial.print("\t");
+  // Serial.println(joyY);
   display.clearDisplay();
 
   // Game selection logic
@@ -102,6 +107,13 @@ void loop() {
     }
   } else if(selected[3]) {
     // Update Play game
+
+     if(selected[3] && !isGameActive) { // Check if Play game was selected and has ended
+    // Reset game-specific variables
+    lives = 3; // Reset lives
+    selected[3] = false; // Deselect Play game, returning to main menu
+    isGameActive = true; // You might want to use a different variable or mechanism to control game activity state
+  } 
     updatePlayGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, isGameActive);
     if (joyButton == LOW) {
       delay(100);
