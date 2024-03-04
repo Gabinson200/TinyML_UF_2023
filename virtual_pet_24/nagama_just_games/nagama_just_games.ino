@@ -10,22 +10,23 @@
 #include "game_feed.h"
 #include "game_play.h"
 #include "game_pet.h"
+#include "Globals.h"
 
 // Define OLED screen parameters
 #define i2c_Address 0x3C // Initialize with the I2C address 0x3C; typically for eBay OLEDs, adjust if using a different source
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET -1 
-#define I2C_SDA 21 // 33
-#define I2C_SCL 22  // 32 on actual
+#define I2C_SDA 21 // Microcontroller pins to which the OLED is attached
+#define I2C_SCL 22  
 
 TwoWire I2C_OLED = TwoWire(0);
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &I2C_OLED, OLED_RESET);
 
 // Define joystick pins
-#define JOY_X 35 // Joystick X-axis analog pin 14
-#define JOY_Y 32 // Joystick Y-axis analog pin 15
-#define JOY_BTN 13 // Joystick button pin 13
+#define JOY_X 35 // Joystick X-axis analog pin
+#define JOY_Y 32 // Joystick Y-axis analog pin
+#define JOY_BTN 13 // Joystick button pin
 
 // Constants for button dimensions and positions
 const int buttonWidth = 32;
@@ -55,11 +56,6 @@ bool isGameActive = false;
 // Timer variables
 unsigned long previousMillis = 0;
 
-static int HAPPY = 100;
-static int ENERGY = 100;
-static int NUTRITION = 100;
-
-
 // Arrays holding dinosaur sprite images
 unsigned char* dino_right[] = {bitmap_right_tail_up, bitmap_right_tail_down};
 unsigned char* dino_left[] = {bitmap_left_tail_up, bitmap_left_tail_down};
@@ -80,20 +76,10 @@ void setup() {
   Serial.println("Display configured");
 }
 
-void loop() {
-  // Read and map joystick input values, these may change depending on the joystick you use!!!
-  joyX = map(analogRead(JOY_X), 0, 1023, 0, 32);
-  joyY = map(analogRead(JOY_Y), 0, 1023, 0, 32);
-  joyButton = digitalRead(JOY_BTN);
-  // Serial.print(joyX);
-  // Serial.print("\t");
-  // Serial.println(joyY);
-  display.clearDisplay();
-
-  // Game selection logic
+void gameSelection() {
   if(selected[0]) {
     // Update Feed game
-    updateFeedGame(display, joyX, joyButton, hunger, SCREEN_WIDTH, SCREEN_HEIGHT);
+    updateFeedGame(display, joyX, joyButton, SCREEN_WIDTH, SCREEN_HEIGHT);
     if (joyButton == LOW) {
       delay(100);
       selected[0] = false;
@@ -107,34 +93,31 @@ void loop() {
     }
   } else if(selected[3]) {
     // Update Play game
-
-     if(selected[3] && !isGameActive) { // Check if Play game was selected and has ended
-    // Reset game-specific variables
-    lives = 3; // Reset lives
-    selected[3] = false; // Deselect Play game, returning to main menu
-    isGameActive = true; // You might want to use a different variable or mechanism to control game activity state
-  } 
     updatePlayGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, isGameActive);
     if (joyButton == LOW) {
       delay(100);
       selected[3] = false;
     }
-  } else {
-    // Menu navigation
-    if(joyX > 100) {
-      menuCount--;
-      if(menuCount > 3) {
-        menuCount = 0;
-      }
-    } else if(joyX < 28) {
-      menuCount++;
-      if(menuCount < 0) {
-        menuCount = 3;
-      }
-    }
+  }
+}
 
-  //Flash the selected button by toggling between black and white
-  for (int i = 0; i < 4; i++) {
+void menuNavigation() {
+  if(joyX > 100) {
+    menuCount--;
+    if(menuCount < 0) {
+      menuCount = 3;
+    }
+  } else if(joyX < 28) {
+    menuCount++;
+    if(menuCount > 3) {
+      menuCount = 0;
+    }
+  }
+}
+
+//Flash the selected button by toggling between black and white
+void flashButtons() {
+    for (int i = 0; i < 4; i++) {
     if (i == menuCount) {
       // Flash the selected button by toggling between black and white
       static bool flashState = false;
@@ -146,10 +129,10 @@ void loop() {
       delay(20);
     }
   }
-  
+}
 
-
-    // Get dinosaur sprite to draw based on happiness and movement direction
+void displayDinosaur() {
+      // Get dinosaur sprite to draw based on happiness and movement direction
     if(dinosaurSpeed >= 0) {
       current_dino_sprite = dino_right[happiness > 50 ? 0 : 1];
     } else {
@@ -165,31 +148,54 @@ void loop() {
     if (dinosaurX <= -64 || dinosaurX >= SCREEN_WIDTH - 64) {
       dinosaurSpeed = -dinosaurSpeed;
     }  
+}
 
-    displayMenuText();
-
-
-    // Example of triggering the game
+void checkForEnterGame() {
+      // Example of triggering the game
     if (menuCount == 0 && joyButton == LOW && selected[0] == false) { // Assuming "Feed" is the first menu item
       delay(70);
       startFeedGame(SCREEN_WIDTH);
       selected[0] = true;
+      isGameActive = true;
     }
 
     if (menuCount == 3 && joyButton == LOW && selected[3] == false) { // Assuming "Play" is the fourth menu item
       delay(70);
       startPlayGame(SCREEN_WIDTH, SCREEN_HEIGHT);
       selected[3] = true;
+      isGameActive = true;
     }
 
     if (menuCount == 1 && joyButton == LOW && selected[1] == false ) { // Assuming "Pet" is the second menu item
       delay(70);
       startPetGame(display);
       selected[1] = true;
+      isGameActive = true;
     }
+}
+
+void loop() {
+  // Read and map joystick input values, these may change depending on the joystick you use!!!
+  joyX = map(analogRead(JOY_X), 0, 1023, 0, 32);
+  joyY = map(analogRead(JOY_Y), 0, 1023, 0, 32);
+  joyButton = digitalRead(JOY_BTN);
+  display.clearDisplay();
+
+
+  // Check for each game, if one is active, run the code for it
+  if(isGameActive) {
+    gameSelection();
   }
-  
-  display.display();
+  // Game is not in progress
+  else {
+    menuNavigation();
+    flashButtons();
+    displayDinosaur();
+    displayMenuText();
+    checkForEnterGame();
+  }
+
+  display.display(); // Read from display buffer
   delay(20); // Speed up simulation
 }
 
@@ -209,5 +215,4 @@ void displayMenuText() {
 
   display.setCursor(101, 3);
   display.println("Play");
-
 }
