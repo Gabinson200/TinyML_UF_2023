@@ -56,8 +56,6 @@ bool isGameActive = false;
 // Timer variables
 unsigned long previousMillis = 0;
 
-
-
 // Arrays holding dinosaur sprite images
 unsigned char* dino_right[] = {bitmap_right_tail_up, bitmap_right_tail_down};
 unsigned char* dino_left[] = {bitmap_left_tail_up, bitmap_left_tail_down};
@@ -81,37 +79,20 @@ void setup() {
 void gameSelection() {
   if(selected[0]) {
     // Update Feed game
-    updateFeedGame(display, joyX, joyButton, NUTRITION, SCREEN_WIDTH, SCREEN_HEIGHT);
-
+    updateFeedGame(display, joyX, joyButton, SCREEN_WIDTH, SCREEN_HEIGHT);
     if (joyButton == LOW) {
-      delay(100);
       selected[0] = false;
     }
   } else if(selected[1]) {
     // Update Pet game
-    updatePetGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, HAPPINESS);
+    updatePetGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY);
     if (joyButton == LOW) {
-      delay(100);
       selected[1] = false;
     }
   } else if(selected[3]) {
     // Update Play game
-
-
-     if(selected[3] && !isGameActive) { // Check if Play game was selected and has ended
-    // Reset game-specific variables
-    ENERGY = min(ENERGY + 5, 100);
-    Serial.print("New ENERGY: ");
-    Serial.println(ENERGY);
-    
-    lives = 3; // Reset lives
-    selected[3] = false; // Deselect Play game, returning to main menu
-    isGameActive = true; // You might want to use a different variable or mechanism to control game activity state
-  } 
-
     updatePlayGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, isGameActive);
     if (joyButton == LOW) {
-      delay(100);
       selected[3] = false;
     }
   }
@@ -139,10 +120,8 @@ void flashButtons() {
       static bool flashState = false;
       display.drawRect(buttonX[i], buttonY, buttonWidth, buttonHeight, flashState ? SH110X_BLACK : SH110X_WHITE);
       flashState = !flashState;
-      delay(20);
     } else {
       display.drawRect(buttonX[i], buttonY, buttonWidth, buttonHeight, SH110X_WHITE);
-      delay(20);
     }
   }
 }
@@ -169,25 +148,40 @@ void displayDinosaur() {
 void checkForEnterGame() {
       // Example of triggering the game
     if (menuCount == 0 && joyButton == LOW && selected[0] == false) { // Assuming "Feed" is the first menu item
-      delay(70);
       startFeedGame(SCREEN_WIDTH);
       selected[0] = true;
       isGameActive = true;
     }
 
     if (menuCount == 3 && joyButton == LOW && selected[3] == false) { // Assuming "Play" is the fourth menu item
-      delay(70);
       startPlayGame(SCREEN_WIDTH, SCREEN_HEIGHT);
       selected[3] = true;
       isGameActive = true;
     }
 
     if (menuCount == 1 && joyButton == LOW && selected[1] == false ) { // Assuming "Pet" is the second menu item
-      delay(70);
       startPetGame(display);
       selected[1] = true;
       isGameActive = true;
     }
+}
+
+// Function to display menu text
+void displayMenuText() {
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+
+  display.setCursor(4, 3);
+  display.println("Feed");
+
+  display.setCursor(40, 3);
+  display.println("Pet");
+
+  display.setCursor(72, 3);
+  display.println("Nap");
+
+  display.setCursor(101, 3);
+  display.println("Play");
 }
 
 void loop() {
@@ -213,22 +207,4 @@ void loop() {
 
   display.display(); // Read from display buffer
   delay(20); // Speed up simulation
-}
-
-// Function to display menu text
-void displayMenuText() {
-  display.setTextSize(1);
-  display.setTextColor(SH110X_WHITE);
-
-  display.setCursor(4, 3);
-  display.println("Feed");
-
-  display.setCursor(40, 3);
-  display.println("Pet");
-
-  display.setCursor(72, 3);
-  display.println("Nap");
-
-  display.setCursor(101, 3);
-  display.println("Play");
 }
