@@ -56,6 +56,8 @@ bool isGameActive = false;
 // Timer variables
 unsigned long previousMillis = 0;
 
+
+
 // Arrays holding dinosaur sprite images
 unsigned char* dino_right[] = {bitmap_right_tail_up, bitmap_right_tail_down};
 unsigned char* dino_left[] = {bitmap_left_tail_up, bitmap_left_tail_down};
@@ -79,20 +81,34 @@ void setup() {
 void gameSelection() {
   if(selected[0]) {
     // Update Feed game
-    updateFeedGame(display, joyX, joyButton, SCREEN_WIDTH, SCREEN_HEIGHT);
+    updateFeedGame(display, joyX, joyButton, NUTRITION, SCREEN_WIDTH, SCREEN_HEIGHT);
+
     if (joyButton == LOW) {
       delay(100);
       selected[0] = false;
     }
   } else if(selected[1]) {
     // Update Pet game
-    updatePetGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, happiness);
+    updatePetGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, HAPPINESS);
     if (joyButton == LOW) {
       delay(100);
       selected[1] = false;
     }
   } else if(selected[3]) {
     // Update Play game
+
+
+     if(selected[3] && !isGameActive) { // Check if Play game was selected and has ended
+    // Reset game-specific variables
+    ENERGY = min(ENERGY + 5, 100);
+    Serial.print("New ENERGY: ");
+    Serial.println(ENERGY);
+    
+    lives = 3; // Reset lives
+    selected[3] = false; // Deselect Play game, returning to main menu
+    isGameActive = true; // You might want to use a different variable or mechanism to control game activity state
+  } 
+
     updatePlayGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, isGameActive);
     if (joyButton == LOW) {
       delay(100);
@@ -134,9 +150,9 @@ void flashButtons() {
 void displayDinosaur() {
       // Get dinosaur sprite to draw based on happiness and movement direction
     if(dinosaurSpeed >= 0) {
-      current_dino_sprite = dino_right[happiness > 50 ? 0 : 1];
+      current_dino_sprite = dino_right[HAPPINESS > 50 ? 0 : 1];
     } else {
-      current_dino_sprite = dino_left[happiness > 50 ? 0 : 1];
+      current_dino_sprite = dino_left[HAPPINESS > 50 ? 0 : 1];
     }
 
     display.drawBitmap(dinosaurX, dinosaurY, current_dino_sprite, 128, 64, SH110X_WHITE);
