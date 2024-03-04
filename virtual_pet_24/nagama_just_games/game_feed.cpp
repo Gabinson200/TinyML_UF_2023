@@ -14,7 +14,7 @@ void startFeedGame(int SCREEN_WIDTH) {
     foodX = random(0, SCREEN_WIDTH - foodSize);
 }
 
-void updateFeedGame(Adafruit_SH1106G &display, int joyX, int joyButton, int hunger, int SCREEN_WIDTH, int SCREEN_HEIGHT) {
+void updateFeedGame(Adafruit_SH1106G &display, int joyX, int joyButton, int SCREEN_WIDTH, int SCREEN_HEIGHT) {
     display.clearDisplay();
     drawGame(display);
 
@@ -41,12 +41,10 @@ void updateFeedGame(Adafruit_SH1106G &display, int joyX, int joyButton, int hung
     }
 
     if (foodY >= 40 && foodY <= 60 && foodX >= feedDinoX && foodX <= feedDinoX + 20) {
-        hunger += 5;
+        NUTRITION += 5;
         foodY = 0;
         foodX = random(0, SCREEN_WIDTH - foodSize);
     }
-
-
 }
 
 void drawGame(Adafruit_SH1106G &display) {
@@ -59,4 +57,10 @@ void drawGame(Adafruit_SH1106G &display) {
   
   // Draw food
   display.fillRect(foodX, foodY, foodSize, foodSize, SH110X_WHITE);
+
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+  display.print("NUTRITION: ");
+  display.print(NUTRITION);
 }
