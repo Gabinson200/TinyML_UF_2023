@@ -6,10 +6,11 @@
 #include <Adafruit_SH110X.h>
 #include "dino_sprites.h"
 #include <Arduino.h>
+#include "Globals.h"
 
 // Function declarations
 void startFeedGame(int SCREEN_WIDTH);
-void updateFeedGame(Adafruit_SH1106G &display, int joyX, int joyButton, int hunger, int SCREEN_WIDTH, int SCREEN_HEIGHT);
+void updateFeedGame(Adafruit_SH1106G &display, int joyX, int joyButton, int SCREEN_WIDTH, int SCREEN_HEIGHT);
 void drawGame(Adafruit_SH1106G &display);
 
 // Definitions
