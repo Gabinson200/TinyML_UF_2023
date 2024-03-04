@@ -1,0 +1,354 @@
+#include "esp_camera.h"
+#include <WiFi.h>
+#include "esp_timer.h"
+#include "img_converters.h"
+#include "Arduino.h"
+#include "fb_gfx.h"
+#include "soc/soc.h" //disable brownout problems
+#include "soc/rtc_cntl_reg.h"  //disable brownout problems
+#include "esp_http_server.h"
+#include <WiFiManager.h>
+
+//Replace with your network credentials
+//not needed if we use wifimanager (:
+//const char* ssid = "REPLACE_WITH_YOUR_SSID";
+//const char* password = "REPLACE_WITH_YOUR_PASSWORD";
+
+#define PART_BOUNDARY "123456789000000000000987654321"
+
+// This project was tested with the AI Thinker Model, M5STACK PSRAM Model and M5STACK WITHOUT PSRAM
+//#define CAMERA_MODEL_AI_THINKER
+//#define CAMERA_MODEL_M5STACK_PSRAM
+//#define CAMERA_MODEL_M5STACK_WITHOUT_PSRAM
+
+// Not tested with this model
+#define CAMERA_MODEL_WROVER_KIT
+
+#if defined(CAMERA_MODEL_WROVER_KIT)
+  #define PWDN_GPIO_NUM    -1
+  #define RESET_GPIO_NUM   -1
+  #define XCLK_GPIO_NUM    21
+  #define SIOD_GPIO_NUM    26
+  #define SIOC_GPIO_NUM    27
+  
+  #define Y9_GPIO_NUM      35
+  #define Y8_GPIO_NUM      34
+  #define Y7_GPIO_NUM      39
+  #define Y6_GPIO_NUM      36
+  #define Y5_GPIO_NUM      19
+  #define Y4_GPIO_NUM      18
+  #define Y3_GPIO_NUM       5
+  #define Y2_GPIO_NUM       4
+  #define VSYNC_GPIO_NUM   25
+  #define HREF_GPIO_NUM    23
+  #define PCLK_GPIO_NUM    22
+
+#elif defined(CAMERA_MODEL_M5STACK_PSRAM)
+  #define PWDN_GPIO_NUM     -1
+  #define RESET_GPIO_NUM    15
+  #define XCLK_GPIO_NUM     27
+  #define SIOD_GPIO_NUM     25
+  #define SIOC_GPIO_NUM     23
+  
+  #define Y9_GPIO_NUM       19
+  #define Y8_GPIO_NUM       36
+  #define Y7_GPIO_NUM       18
+  #define Y6_GPIO_NUM       39
+  #define Y5_GPIO_NUM        5
+  #define Y4_GPIO_NUM       34
+  #define Y3_GPIO_NUM       35
+  #define Y2_GPIO_NUM       32
+  #define VSYNC_GPIO_NUM    22
+  #define HREF_GPIO_NUM     26
+  #define PCLK_GPIO_NUM     21
+
+#elif defined(CAMERA_MODEL_M5STACK_WITHOUT_PSRAM)
+  #define PWDN_GPIO_NUM     -1
+  #define RESET_GPIO_NUM    15
+  #define XCLK_GPIO_NUM     27
+  #define SIOD_GPIO_NUM     25
+  #define SIOC_GPIO_NUM     23
+  
+  #define Y9_GPIO_NUM       19
+  #define Y8_GPIO_NUM       36
+  #define Y7_GPIO_NUM       18
+  #define Y6_GPIO_NUM       39
+  #define Y5_GPIO_NUM        5
+  #define Y4_GPIO_NUM       34
+  #define Y3_GPIO_NUM       35
+  #define Y2_GPIO_NUM       17
+  #define VSYNC_GPIO_NUM    22
+  #define HREF_GPIO_NUM     26
+  #define PCLK_GPIO_NUM     21
+
+#elif defined(CAMERA_MODEL_AI_THINKER)
+  #define PWDN_GPIO_NUM     32
+  #define RESET_GPIO_NUM    -1
+  #define XCLK_GPIO_NUM      0
+  #define SIOD_GPIO_NUM     26
+  #define SIOC_GPIO_NUM     27
+  
+  #define Y9_GPIO_NUM       35
+  #define Y8_GPIO_NUM       34
+  #define Y7_GPIO_NUM       39
+  #define Y6_GPIO_NUM       36
+  #define Y5_GPIO_NUM       21
+  #define Y4_GPIO_NUM       19
+  #define Y3_GPIO_NUM       18
+  #define Y2_GPIO_NUM        5
+  #define VSYNC_GPIO_NUM    25
+  #define HREF_GPIO_NUM     23
+  #define PCLK_GPIO_NUM     22
+#else
+  #error "Camera model not selected"
+#endif
+
+
+WiFiManager wm; // global wm instance
+
+static const char* _STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
+static const char* _STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
+static const char* _STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
+
+httpd_handle_t stream_httpd = NULL; // Handle for the video server
+httpd_handle_t photo_httpd = NULL; // Handle for the photo server
+
+camera_fb_t* last_photo = NULL;
+
+static esp_err_t stream_handler(httpd_req_t *req){
+  camera_fb_t * fb = NULL;
+  esp_err_t res = ESP_OK;
+  size_t _jpg_buf_len = 0;
+  uint8_t * _jpg_buf = NULL;
+  char * part_buf[64];
+
+  res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
+  if(res != ESP_OK){
+    return res;
+  }
+
+  while(true){
+    fb = esp_camera_fb_get();
+    if (!fb) {
+      Serial.println("Camera capture failed");
+      res = ESP_FAIL;
+    } else {
+      if(fb->width > 400){
+        if(fb->format != PIXFORMAT_JPEG){
+          bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
+          esp_camera_fb_return(fb);
+          fb = NULL;
+          if(!jpeg_converted){
+            Serial.println("JPEG compression failed");
+            res = ESP_FAIL;
+          }
+        } else {
+          _jpg_buf_len = fb->len;
+          _jpg_buf = fb->buf;
+        }
+      }
+    }
+    if(res == ESP_OK){
+      size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, _jpg_buf_len);
+      res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
+    }
+    if(res == ESP_OK){
+      res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
+    }
+    if(res == ESP_OK){
+      res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
+    }
+    if(fb){
+      esp_camera_fb_return(fb);
+      fb = NULL;
+      _jpg_buf = NULL;
+    } else if(_jpg_buf){
+      free(_jpg_buf);
+      _jpg_buf = NULL;
+    }
+    if(res != ESP_OK){
+      break;
+    }
+    //Serial.printf("MJPG: %uB\n",(uint32_t)(_jpg_buf_len));
+  }
+  return res;
+}
+
+static esp_err_t photo_handler(httpd_req_t *req){
+  esp_err_t res = ESP_OK;
+
+  if (last_photo == NULL) {
+    // No photo captured yet
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
+  }
+
+  res = httpd_resp_set_type(req, "image/jpeg");
+  if(res != ESP_OK){
+    return res;
+  }
+
+  // Send the photo data
+  res = httpd_resp_send(req, (const char*)last_photo->buf, last_photo->len);
+
+  // Optionally, you could release the photo buffer after serving it if it's not needed anymore
+  esp_camera_fb_return(last_photo);
+  last_photo = NULL;
+
+  return res;
+}
+
+void startCameraServer(){
+  httpd_config_t config_stream = HTTPD_DEFAULT_CONFIG();
+  config_stream.server_port = 80;
+
+  httpd_uri_t index_uri_stream = {
+    .uri       = "/",
+    .method    = HTTP_GET,
+    .handler   = stream_handler,
+    .user_ctx  = NULL
+  };
+  
+  //Serial.printf("Starting web server on port: '%d'\n", config.server_port);
+  if (httpd_start(&stream_httpd, &config_stream) == ESP_OK) {
+    httpd_register_uri_handler(stream_httpd, &index_uri_stream);
+  }
+
+  // Start photo server on port 81
+  httpd_config_t config_photo = HTTPD_DEFAULT_CONFIG();
+  config_photo.server_port = 81;
+  httpd_uri_t index_uri_photo = {
+    .uri       = "/",
+    .method    = HTTP_GET,
+    .handler   = photo_handler, // Define and use a different handler for serving the photo
+    .user_ctx  = NULL
+  };
+  if (httpd_start(&photo_httpd, &config_photo) == ESP_OK) {
+    httpd_register_uri_handler(photo_httpd, &index_uri_photo);
+  }
+}
+
+
+// Define joystick pins
+#define JOY_X 14 // Joystick X-axis analog pin
+#define JOY_Y 15 // Joystick Y-axis analog pin
+#define JOY_BTN 13 // Joystick button pin
+// Variables for joystick and game states
+int joyButton = LOW;
+
+
+void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+ 
+  Serial.begin(115200);
+  Serial.setDebugOutput(false);
+  
+  camera_config_t config;
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = Y2_GPIO_NUM;
+  config.pin_d1 = Y3_GPIO_NUM;
+  config.pin_d2 = Y4_GPIO_NUM;
+  config.pin_d3 = Y5_GPIO_NUM;
+  config.pin_d4 = Y6_GPIO_NUM;
+  config.pin_d5 = Y7_GPIO_NUM;
+  config.pin_d6 = Y8_GPIO_NUM;
+  config.pin_d7 = Y9_GPIO_NUM;
+  config.pin_xclk = XCLK_GPIO_NUM;
+  config.pin_pclk = PCLK_GPIO_NUM;
+  config.pin_vsync = VSYNC_GPIO_NUM;
+  config.pin_href = HREF_GPIO_NUM;
+  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_pwdn = PWDN_GPIO_NUM;
+  config.pin_reset = RESET_GPIO_NUM;
+  config.xclk_freq_hz = 20000000;
+  config.pixel_format = PIXFORMAT_JPEG; 
+  
+  if(psramFound()){
+    config.frame_size = FRAMESIZE_UXGA;
+    config.jpeg_quality = 10;
+    config.fb_count = 2;
+  } else {
+    config.frame_size = FRAMESIZE_SVGA;
+    config.jpeg_quality = 12;
+    config.fb_count = 1;
+  }
+  
+  // Camera init
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.printf("Camera init failed with error 0x%x", err);
+    return;
+  }
+
+  // using wifimanager for easy connect
+  bool res;
+  //wm.resetSettings(); // Add this line to clear settings for testing purposes
+  wm.setClass("invert"); //dark theme
+  //set static ip
+  //wm.setSTAStaticIPConfig(IPAddress(192,168,0,99), IPAddress(192,168,0,1), IPAddress(255,255,255,0)); // optional DNS 4th argument
+  wm.setShowStaticFields(true); // force show static ip fields
+  wm.setShowDnsFields(true);    // force show dns field always
+  wm.setConfigPortalTimeout(60); // auto close configportal after n seconds
+  wm.setAPClientCheck(true); // avoid timeout if client connected to softap
+  wm.setBreakAfterConfig(false);
+  res = wm.autoConnect("AutoConnectAP","password"); // password protected ap
+  if(!res) {
+    Serial.println("Failed to connect");
+    // ESP.restart();
+  }
+
+  // Configuring static IP
+  //if(!WiFi.config(staticIP, gateway, subnet, primaryDNS, secondaryDNS)) {
+  //  Serial.println("Failed to configure Static IP");
+  //} else {
+  //  Serial.println("Static IP configured!");
+  //}
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  
+  Serial.print("Camera Stream Ready! Go to: http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("");
+  Serial.println("Connected..!");
+ 
+  Serial.print("Current ESP32 IP: ");
+  Serial.println(WiFi.localIP());
+  //                  ^^^ this should be the same as the first argument that was hardcoded
+  Serial.print("Gateway (router) IP: ");
+  Serial.println(WiFi.gatewayIP());
+  Serial.print("Subnet Mask: " );
+  Serial.println(WiFi.subnetMask());
+  Serial.print("Primary DNS: ");
+  Serial.println(WiFi.dnsIP(0));
+  Serial.print("Secondary DNS: ");
+  Serial.println(WiFi.dnsIP(1));
+  // Start streaming web server
+  startCameraServer();
+}
+
+void loop() {
+  joyButton = digitalRead(JOY_BTN);
+  if (joyButton == HIGH){
+    if (last_photo) {
+      // Return the previous frame buffer to avoid memory leak
+      esp_camera_fb_return(last_photo);
+      last_photo = NULL;
+    }
+    // Capture a new photo
+    last_photo = esp_camera_fb_get();
+    if (!last_photo) {
+      Serial.println("Camera capture failed");
+    } else {
+      Serial.println("Picture taken");
+    }
+  }
+  delay(1);
+}
