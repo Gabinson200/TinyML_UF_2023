@@ -8,6 +8,7 @@ extern bool selected[4];
 extern int NUTRITION;
 extern int HAPPINESS;
 extern int ENERGY;
+extern bool isGameActive;
 
 
 #endif
