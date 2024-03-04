@@ -48,9 +48,9 @@ int dinosaurY = 0;
 int dinosaurSpeed = 2;
 
 // Internal state values [0, 100] for hunger, happiness, and tiredness
-int hunger = 48;
-int happiness = 48;
-int tired = 48;
+int NUTRITION = 48;
+int HAPPINESS = 48;
+int ENERGY = 48;
 bool isGameActive = false;
 
 // Timer variables
