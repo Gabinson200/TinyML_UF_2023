@@ -5,8 +5,10 @@
 #define GLOBALS_H
 
 extern bool selected[4];
-extern int hunger;
-extern int happiness;
+extern int NUTRITION;
+extern int HAPPINESS;
+extern int ENERGY;
+extern bool isGameActive;
 
 
 #endif
