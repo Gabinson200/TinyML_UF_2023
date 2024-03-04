@@ -10,6 +10,7 @@
 #include "game_feed.h"
 #include "game_play.h"
 #include "game_pet.h"
+#include "Globals.h"
 
 // Define OLED screen parameters
 #define i2c_Address 0x3C // Initialize with the I2C address 0x3C; typically for eBay OLEDs, adjust if using a different source
@@ -47,17 +48,15 @@ int dinosaurY = 0;
 int dinosaurSpeed = 2;
 
 // Internal state values [0, 100] for hunger, happiness, and tiredness
-int hunger = 48;
-int happiness = 48;
-int tired = 48;
+int NUTRITION = 48;
+int HAPPINESS = 48;
+int ENERGY = 48;
 bool isGameActive = false;
 
 // Timer variables
 unsigned long previousMillis = 0;
 
-static int HAPPY = 100;
-static int ENERGY = 100;
-static int NUTRITION = 100;
+
 
 
 // Arrays holding dinosaur sprite images
@@ -93,14 +92,14 @@ void loop() {
   // Game selection logic
   if(selected[0]) {
     // Update Feed game
-    updateFeedGame(display, joyX, joyButton, hunger, SCREEN_WIDTH, SCREEN_HEIGHT);
+    updateFeedGame(display, joyX, joyButton, NUTRITION, SCREEN_WIDTH, SCREEN_HEIGHT);
     if (joyButton == LOW) {
       delay(100);
       selected[0] = false;
     }
   } else if(selected[1]) {
     // Update Pet game
-    updatePetGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, happiness);
+    updatePetGame(display, SCREEN_WIDTH, SCREEN_HEIGHT, joyX, joyY, HAPPINESS);
     if (joyButton == LOW) {
       delay(100);
       selected[1] = false;
@@ -110,6 +109,10 @@ void loop() {
 
      if(selected[3] && !isGameActive) { // Check if Play game was selected and has ended
     // Reset game-specific variables
+    ENERGY = min(ENERGY + 5, 100);
+    Serial.print("New ENERGY: ");
+    Serial.println(ENERGY);
+    
     lives = 3; // Reset lives
     selected[3] = false; // Deselect Play game, returning to main menu
     isGameActive = true; // You might want to use a different variable or mechanism to control game activity state
@@ -151,9 +154,9 @@ void loop() {
 
     // Get dinosaur sprite to draw based on happiness and movement direction
     if(dinosaurSpeed >= 0) {
-      current_dino_sprite = dino_right[happiness > 50 ? 0 : 1];
+      current_dino_sprite = dino_right[HAPPINESS > 50 ? 0 : 1];
     } else {
-      current_dino_sprite = dino_left[happiness > 50 ? 0 : 1];
+      current_dino_sprite = dino_left[HAPPINESS > 50 ? 0 : 1];
     }
 
     display.drawBitmap(dinosaurX, dinosaurY, current_dino_sprite, 128, 64, SH110X_WHITE);
