@@ -31,7 +31,7 @@ void startPetGame(Adafruit_SH1106G &display) {
   display.display();
 }
 
-void updatePetGame(Adafruit_SH1106G &display, int SCREEN_WIDTH, int SCREEN_HEIGHT, int joyX, int joyY, int happiness){
+void updatePetGame(Adafruit_SH1106G &display, int SCREEN_WIDTH, int SCREEN_HEIGHT, int joyX, int joyY){
   //following code is to display timer
   unsigned long currentMillis = millis();
 
@@ -46,7 +46,7 @@ void updatePetGame(Adafruit_SH1106G &display, int SCREEN_WIDTH, int SCREEN_HEIGH
     if (remainingTime >= 0) {
       remainingTime--;
     }else if(count >= BOX_SIZE*BOX_SIZE){
-      happiness += remainingTime;
+      HAPPINESS += remainingTime;
       return;
       //game end code since no more remianing time user just has to press the main putton
     }
