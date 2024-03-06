@@ -6,6 +6,7 @@
 //#include <Adafruit_SSD1306.h>
 #include "dino_sprites.h"
 #include <Arduino.h>
+#include "Globals.h"
 
 // Function declarations
 //void updatePlayGame(Adafruit_SSD1306 &display, int joyX, int joyButton, int hunger, int SCREEN_WIDTH, int SCREEN_HEIGHT);
