@@ -1,0 +1,24 @@
+{
+	"nodes":[
+		{"id":"723df90430c4f4f7","type":"group","x":-2171,"y":-1040,"width":4480,"height":1954,"label":"Academic"},
+		{"id":"919ba5aab01a785b","type":"group","x":-2171,"y":994,"width":2691,"height":1606,"label":"Implementation"},
+		{"id":"9cba49159539aaf6","type":"group","x":-1531,"y":-468,"width":940,"height":1188,"label":"General Resources"},
+		{"id":"7db03f8711cb306d","type":"group","x":-542,"y":-468,"width":702,"height":1188,"label":"Weekend of 4/6-7"},
+		{"id":"226b4fa4390d06d6","type":"group","x":-2171,"y":-468,"width":587,"height":594,"label":"Prereqs"},
+		{"id":"f1ad177adf28971f","type":"text","text":"<big>The overall goal of our club is to implement the [micro speech](https://github.com/espressif/esp-tflite-micro/tree/6a91f2c4b297744489f3ff12405cbcfe32ff7fd6/examples/micro_speech)example based off of the [TFLM code](https://github.com/tensorflow/tflite-micro/tree/main/tensorflow/lite/micro/examples/micro_speech) .</big>","x":-2160,"y":1000,"width":420,"height":300},
+		{"id":"b7a0551a5abf382d","type":"text","text":"![[Adam Kocsis Project in Data Sci Poster(1).png]]","x":-1680,"y":1000,"width":1760,"height":1320},
+		{"id":"b2fd766914cf7ece","type":"link","url":"https://tinyml.seas.upenn.edu/","x":-1531,"y":-430,"width":470,"height":470},
+		{"id":"6ec0a08b945a5521","type":"link","url":"https://hanlab.mit.edu/courses/2023-fall-65940","x":-1531,"y":80,"width":470,"height":480},
+		{"id":"37374cbb103c4514","type":"link","url":"https://www.tinyml.org/","x":-1061,"y":-430,"width":450,"height":470},
+		{"id":"f464e7ae496c5f30","type":"text","text":"<big>Hopefully by working on the IoT competition you have gotten familiar with the Arduino IDE and the general development process for an MCU (Microcontroller Unit) not Marvel. If you missed this part of the process no worries, only rudimentary hardware knowledge is needed with some basic understanding of C++.\n</big> ","x":-2131,"y":-430,"width":520,"height":362},
+		{"id":"483c9ff91f5516d0","x":-520,"y":-720,"width":829,"height":200,"type":"text","text":"<font size = 28> The following groupings will define the workflow for the next 2 weeks</font>"},
+		{"id":"aa49bbc79cd45577","type":"text","text":"<font size= 28> Watch:</font>","x":-520,"y":-460,"width":250,"height":100},
+		{"id":"317df9458e629164","x":-520,"y":-320,"width":640,"height":360,"type":"link","url":"https://www.youtube.com/watch?v=rfFg1gLLaAo"},
+		{"id":"11f5190af3539b46","x":-520,"y":320,"width":640,"height":360,"type":"link","url":"https://www.youtube.com/watch?v=w42tfkq_HE4&list=PL7rtKJAz_mPe6kAbiH6Ucq02Vpa95qvBJ"},
+		{"id":"975ec98d9998d703","type":"text","text":"<font size= 28> Watch until video 18 \"Tutorial 1.2\":</font>","x":-520,"y":80,"width":640,"height":160},
+		{"id":"3f2d4e66ea47ab7c","type":"text","text":"<font size = 28> Note: Feel free to x2 speed videos or whatever your preference is</font>","x":-520,"y":-960,"width":829,"height":200}
+	],
+	"edges":[
+		{"id":"c78f6c7b7ceb4947","fromNode":"9cba49159539aaf6","fromSide":"right","toNode":"7db03f8711cb306d","toSide":"left"}
+	]
+}

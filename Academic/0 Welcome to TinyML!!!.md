@@ -1,0 +1,1 @@
+![[Adam Kocsis Project in Data Sci Poster(1).png]] 

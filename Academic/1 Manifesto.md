@@ -1,0 +1,1 @@
+The purpose of this applied team is to learn about and explore the field of edge computing more, specifically TinyML. TinyML is a subfield of ML where AI more specifically neural networks in our case are deployed to devices on the edge of computational networks where. Such domains pose severe restrictions on the amount of compute, memory, and tools available to developers.
